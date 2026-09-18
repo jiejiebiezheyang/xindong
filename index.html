@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>盲盒模拟器 · 概率分析</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    /* ============ shadcn/ui 设计令牌 ============ */
+    :root {
+      --background: 0 0% 100%;
+      --foreground: 240 10% 3.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 240 10% 3.9%;
+      --popover: 0 0% 100%;
+      --popover-foreground: 240 10% 3.9%;
+      --primary: 240 5.9% 10%;
+      --primary-foreground: 0 0% 98%;
+      --secondary: 240 4.8% 95.9%;
+      --secondary-foreground: 240 5.9% 10%;
+      --muted: 240 4.8% 95.9%;
+      --muted-foreground: 240 3.8% 46.1%;
+      --accent: 240 4.8% 95.9%;
+      --accent-foreground: 240 5.9% 10%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 0 0% 98%;
+      --border: 240 5.9% 90%;
+      --input: 240 5.9% 90%;
+      --ring: 240 5.9% 10%;
+      --radius: 0.5rem;
+
+      --success: 142 76% 36%;
+      --success-foreground: 0 0% 98%;
+      --warning: 38 92% 50%;
+      --warning-foreground: 0 0% 98%;
+
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ============ PC端主布局 ============ */
+    .app-shell {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 2rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      flex: 1;
+    }
+
+    /* PC端两列布局 */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 1024px) {
+      .dashboard {
+        grid-template-columns: 380px 1fr;
+        align-items: start;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .main-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+    }
+
+    /* ============ 卡片 ============ */
+    .card {
+      background: hsl(var(--card));
+      color: hsl(var(--card-foreground));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 1.25rem 1.5rem 0.75rem;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-description {
+      font-size: 0.8125rem;
+      color: hsl(var(--muted-foreground));
+      margin-top: 0.25rem;
+      line-height: 1.5;
+    }
+
+    .card-content {
+      padding: 1rem 1.5rem 1.5rem;
+    }
+
+    /* ============ 徽章 ============ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 9999px;
+      padding: 0.125rem 0.625rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      line-height: 1.25rem;
+      border: 1px solid transparent;
+    }
+
+    .badge-outline {
+      border-color: hsl(var(--border));
+      color: hsl(var(--foreground));
+      background: transparent;
+    }
+
+    .badge-secondary {
+      background: hsl(var(--secondary));
+      color: hsl(var(--secondary-foreground));
+    }
+
+    /* ============ 按钮 ============ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.375rem;
+      white-space: nowrap;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-weight: 500;
+      height: 2.5rem;
+      padding: 0 1rem;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      outline: none;
+      user-select: none;
+      line-height: 1;
+    }
+
+    .btn:focus-visible {
+      box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .btn-default {
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-default:hover {
+      background: hsl(var(--primary) / 0.9);
+    }
+
+    .btn-outline {
+      border-color: hsl(var(--border));
+      background: transparent;
+      color: hsl(var(--foreground));
+    }
+
+    .btn-outline:hover {
+      background: hsl(var(--accent));
+      color: hsl(var(--accent-foreground));
+    }
+
+    /* ============ 输入框 ============ */
+    .input {
+      display: flex;
+      height: 2.5rem;
+      width: 100%;
+      border-radius: var(--radius);
+      border: 1px solid hsl(var(--input));
+      background: hsl(var(--background));
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+      color: hsl(var(--foreground));
+      font-variant-numeric: tabular-nums;
+    }
+
+    .input::placeholder {
+      color: hsl(var(--muted-foreground));
+    }
+
+    .input:focus {
+      border-color: hsl(var(--ring));
+      box-shadow: 0 0 0 2px hsl(var(--ring) / 0.15);
+    }
+
+    /* ============ 表格 ============ */
+    .table-wrapper {
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+    }
+
+    .table thead {
+      background: hsl(var(--muted));
+    }
+
+    .table th {
+      text-align: left;
+      padding: 0.625rem 0.875rem;
+      font-weight: 500;
+      color: hsl(var(--muted-foreground));
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid hsl(var(--border));
+    }
+
+    .table td {
+      padding: 0.625rem 0.875rem;
+      border-bottom: 1px solid hsl(var(--border));
+      color: hsl(var(--foreground));
+      font-variant-numeric: tabular-nums;
+    }
+
+    .table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .table tbody tr:hover {
+      background: hsl(var(--muted) / 0.5);
+    }
+
+    .table .text-right {
+      text-align: right;
+    }
+
+    /* ============ 分隔线 ============ */
+    .separator {
+      height: 1px;
+      background: hsl(var(--border));
+      margin: 0.75rem 0;
+    }
+
+    /* ============ 进度条 ============ */
+    .progress {
+      position: relative;
+      height: 0.5rem;
+      width: 100%;
+      overflow: hidden;
+      border-radius: 9999px;
+      background: hsl(var(--secondary));
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: hsl(var(--primary));
+      transition: width 0.3s ease;
+      border-radius: 9999px;
+    }
+
+    /* ============ 对话框 ============ */
+    .dialog-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgb(0 0 0 / 0.8);
+      backdrop-filter: blur(4px);
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      animation: fadeIn 0.15s ease;
+    }
+
+    .dialog-overlay[data-state="open"] {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .dialog-content {
+      background: hsl(var(--background));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 30rem;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .dialog-header {
+      padding: 1.5rem 1.5rem 0.5rem;
+      text-align: center;
+    }
+
+    .dialog-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .dialog-description {
+      font-size: 0.875rem;
+      color: hsl(var(--muted-foreground));
+      margin-top: 0.5rem;
+    }
+
+    .dialog-body {
+      padding: 1rem 1.5rem;
+    }
+
+    .dialog-footer {
+      padding: 0.5rem 1.5rem 1.5rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* ============ 数据行 ============ */
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      font-size: 0.875rem;
+    }
+
+    .data-row + .data-row {
+      border-top: 1px solid hsl(var(--border));
+    }
+
+    .data-label {
+      color: hsl(var(--muted-foreground));
+      font-weight: 400;
+    }
+
+    .data-value {
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ============ 指标卡片 ============ */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    @media (min-width: 640px) {
+      .metrics-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .metric-card {
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      padding: 1rem 0.875rem;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .metric-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: hsl(var(--ring) / 0.2);
+    }
+
+    .metric-label {
+      font-size: 0.6875rem;
+      font-weight: 500;
+      color: hsl(var(--muted-foreground));
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+    }
+
+    .text-success { color: hsl(var(--success)); }
+    .text-destructive { color: hsl(var(--destructive)); }
+    .text-warning { color: hsl(var(--warning)); }
+    .text-muted { color: hsl(var(--muted-foreground)); }
+
+    /* ============ 倍率切换 ============ */
+    .toggle-group {
+      display: inline-flex;
+      background: hsl(var(--muted));
+      border-radius: var(--radius);
+      padding: 0.25rem;
+      gap: 0.125rem;
+    }
+
+    .toggle-group-item {
+      padding: 0.375rem 0.875rem;
+      border-radius: calc(var(--radius) - 2px);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: hsl(var(--muted-foreground));
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .toggle-group-item:hover {
+      color: hsl(var(--foreground));
+    }
+
+    .toggle-group-item[data-active="true"] {
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* ============ 奖品统计 ============ */
+    .prizes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 0.5rem;
+    }
+
+    .prize-chip {
+      background: hsl(var(--muted) / 0.5);
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      padding: 0.75rem 0.5rem;
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    .prize-chip:hover {
+      background: hsl(var(--muted));
+    }
+
+    .prize-chip-name {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: hsl(var(--muted-foreground));
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .prize-chip-count {
+      font-size: 1.25rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: hsl(var(--foreground));
+    }
+
+    /* ============ 工具类 ============ */
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .items-start { align-items: flex-start; }
+    .justify-between { justify-content: space-between; }
+    .justify-center { justify-content: center; }
+    .gap-1 { gap: 0.25rem; }
+    .gap-2 { gap: 0.5rem; }
+    .gap-3 { gap: 0.75rem; }
+    .gap-4 { gap: 1rem; }
+    .grid { display: grid; }
+    .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+    .mt-1 { margin-top: 0.25rem; }
+    .mt-2 { margin-top: 0.5rem; }
+    .mt-3 { margin-top: 0.75rem; }
+    .mt-4 { margin-top: 1rem; }
+    .mb-1 { margin-bottom: 0.25rem; }
+    .mb-2 { margin-bottom: 0.5rem; }
+    .mb-3 { margin-bottom: 0.75rem; }
+    .mb-4 { margin-bottom: 1rem; }
+    .w-full { width: 100%; }
+    .text-xs { font-size: 0.75rem; }
+    .text-sm { font-size: 0.875rem; }
+    .text-base { font-size: 1rem; }
+    .text-lg { font-size: 1.125rem; }
+    .font-medium { font-weight: 500; }
+    .font-semibold { font-weight: 600; }
+    .font-bold { font-weight: 700; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .truncate {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ============ 图标 ============ */
+    .icon {
+      width: 1rem;
+      height: 1rem;
+      flex-shrink: 0;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .icon-sm {
+      width: 0.875rem;
+      height: 0.875rem;
+    }
+
+    .icon-lg {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+
+    /* 奖品图标颜色 */
+    .prize-icon-castle { color: #8b5cf6; }
+    .prize-icon-charm { color: #10b981; }
+    .prize-icon-diamond { color: #06b6d4; }
+    .prize-icon-wand { color: #f59e0b; }
+    .prize-icon-doll { color: #ec4899; }
+    .prize-icon-candy { color: #f97316; }
+    .prize-icon-ticket { color: #6366f1; }
+
+    /* ============ 响应式 ============ */
+    @media (max-width: 640px) {
+      .app-shell {
+        padding: 1rem 1rem 2rem;
+      }
+      .table th, .table td { padding: 0.5rem 0.625rem; font-size: 0.75rem; }
+      .card-header { padding: 1rem 1rem 0.5rem; }
+      .card-content { padding: 0.75rem 1rem 1rem; }
+      .dialog-header { padding: 1.25rem 1.25rem 0.5rem; }
+      .dialog-body { padding: 0.75rem 1.25rem; }
+      .dialog-footer { padding: 0.5rem 1.25rem 1.25rem; }
+      .metric-value { font-size: 1.25rem; }
+    }
+
+    /* ============ 滚动条 ============ */
+    .dialog-content::-webkit-scrollbar {
+      width: 6px;
+    }
+    .dialog-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .dialog-content::-webkit-scrollbar-thumb {
+      background: hsl(var(--border));
+      border-radius: 3px;
+    }
+    .dialog-content::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--muted-foreground));
+    }
+
+    /* 动画 */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .animate-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+
+    /* ============ 页面标题栏 ============ */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid hsl(var(--border));
+    }
+
+    .page-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .page-title h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    .page-title .subtitle {
+      font-size: 0.8125rem;
+      color: hsl(var(--muted-foreground));
+      margin-top: 0.125rem;
+    }
+
+    /* ============ 模拟统计面板 ============ */
+    .sim-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    @media (min-width: 640px) {
+      .sim-stats {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .sim-stat-item {
+      background: hsl(var(--muted) / 0.5);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    .sim-stat-label {
+      font-size: 0.6875rem;
+      color: hsl(var(--muted-foreground));
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+    }
+
+    .sim-stat-value {
+      font-size: 1.125rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ============ 配置网格 ============ */
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .config-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+
+    .config-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: hsl(var(--muted-foreground));
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- ============ 页面标题 ============ -->
+    <header class="page-header">
+      <div class="page-title">
+        <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 1.75rem; height: 1.75rem;">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+          <line x1="12" y1="22.08" x2="12" y2="12" />
+        </svg>
+        <div>
+          <h1 id="mainTitle">盲盒模拟器</h1>
+          <div class="subtitle">概率分布分析与蒙特卡洛模拟</div>
+        </div>
+      </div>
+      <div class="badge badge-outline" id="multiplierBadge">基础倍率</div>
+    </header>
+
+    <!-- ============ 主仪表盘 ============ -->
+    <div class="dashboard">
+      <!-- ============ 左侧栏 ============ -->
+      <aside class="sidebar">
+        <!-- 运势分析 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2" />
+                <path d="M12 20v2" />
+                <path d="m4.93 4.93 1.41 1.41" />
+                <path d="m17.66 17.66 1.41 1.41" />
+                <path d="M2 12h2" />
+                <path d="M20 12h2" />
+                <path d="m6.34 17.66-1.41 1.41" />
+                <path d="m19.07 4.93-1.41 1.41" />
+              </svg>
+              今日运势分析
+            </div>
+            <div class="card-description">基于日期、时间等因素的综合评估</div>
+          </div>
+          <div class="card-content">
+            <div class="flex flex-col items-center gap-2">
+              <div id="fortuneIcon" style="line-height: 1;"></div>
+              <div class="font-medium text-sm" id="fortuneText">正在计算…</div>
+              <div class="text-xs text-muted" id="fortuneDetail" style="text-align: center; line-height: 1.4;">基于日期时间分析</div>
+              <div class="text-xs text-muted" style="font-style: italic; opacity: 0.7; margin-top: 0.25rem;">* 仅供娱乐，理性抽奖 *</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 倍率配置 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v20" />
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+              倍率方案
+            </div>
+            <div class="card-description">选择不同的概率分布方案</div>
+          </div>
+          <div class="card-content">
+            <div class="toggle-group" id="multiplierGroup" style="width: 100%;">
+              <button class="toggle-group-item" data-mult="1" data-active="true" onclick="changeMultiplier(1, event)" style="flex: 1;">基础</button>
+              <button class="toggle-group-item" data-mult="3" data-active="false" onclick="changeMultiplier(3, event)" style="flex: 1;">3 倍</button>
+              <button class="toggle-group-item" data-mult="4" data-active="false" onclick="changeMultiplier(4, event)" style="flex: 1;">4 倍</button>
+              <button class="toggle-group-item" data-mult="5" data-active="false" onclick="changeMultiplier(5, event)" style="flex: 1;">5 倍</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 概率配置表 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18" />
+                <path d="M18 17V9" />
+                <path d="M13 17V5" />
+                <path d="M8 17v-3" />
+              </svg>
+              概率分布表
+            </div>
+            <div class="card-description">各奖品的中奖概率与奖励金额</div>
+          </div>
+          <div class="card-content" style="padding-top: 0;">
+            <div class="table-wrapper">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>奖品</th>
+                    <th class="text-right">概率</th>
+                    <th class="text-right">奖励</th>
+                  </tr>
+                </thead>
+                <tbody id="prizeTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ============ 右侧主面板 ============ -->
+      <main class="main-panel">
+        <!-- 关键指标 -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+              累计抽奖
+            </div>
+            <div class="metric-value" id="totalDraws">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v20" />
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+              累计支出
+            </div>
+            <div class="metric-value" id="totalExpense">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v20" />
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+              累计收入
+            </div>
+            <div class="metric-value" id="totalIncome">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18" />
+                <path d="m19 9-5 5-4-4-3 3" />
+              </svg>
+              净盈亏
+            </div>
+            <div class="metric-value" id="profitLoss">0</div>
+          </div>
+        </div>
+
+        <!-- 抽奖操作 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v8" />
+                <path d="M8 12h8" />
+              </svg>
+              抽奖操作
+            </div>
+            <div class="card-description">每次抽奖固定消耗 15 元</div>
+          </div>
+          <div class="card-content">
+            <div class="config-grid">
+              <button class="btn btn-default" onclick="draw(1)">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v8" />
+                  <path d="M8 12h8" />
+                </svg>
+                单次抽奖
+              </button>
+              <button class="btn btn-default" onclick="draw(10)">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 6v6l4 2" />
+                </svg>
+                十连抽
+              </button>
+              <button class="btn btn-default" onclick="draw(50)">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+                五十连抽
+              </button>
+              <button class="btn btn-outline" onclick="reset()">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+                重置数据
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 蒙特卡洛模拟 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18" />
+                <path d="M18 17V9" />
+                <path d="M13 17V5" />
+                <path d="M8 17v-3" />
+              </svg>
+              蒙特卡洛模拟
+            </div>
+            <div class="card-description">
+              通过大量随机抽样，估计抽到「梦幻城堡」所需的期望抽奖次数
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="config-grid">
+              <div class="config-item" style="grid-column: span 2;">
+                <label class="config-label" for="simulationRounds">模拟迭代次数</label>
+                <input
+                  type="number"
+                  id="simulationRounds"
+                  class="input"
+                  min="1"
+                  max="100000"
+                  placeholder="输入 1 - 100000"
+                  value="1000"
+                />
+              </div>
+              <div class="config-item" style="grid-column: span 2; justify-content: flex-end;">
+                <button class="btn btn-default" onclick="runSimulation()" style="margin-top: auto;">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                  执行模拟
+                </button>
+              </div>
+            </div>
+            <div id="simulationResults"></div>
+          </div>
+        </div>
+
+        <!-- 奖品统计 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                <path d="M4 22h16" />
+                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+              </svg>
+              奖品统计
+            </div>
+            <div class="card-description">当前抽奖会话中获得的奖品分布</div>
+          </div>
+          <div class="card-content">
+            <div class="prizes-grid" id="prizesGrid">
+              <div class="text-muted text-sm" style="grid-column: 1 / -1; text-align: center; padding: 1.5rem;">
+                暂无奖品数据
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- ============ 页脚 ============ -->
+    <footer class="text-xs text-muted" style="text-align: center; padding: 1rem 0 0;">
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener" style="color: inherit; text-decoration: none;">
+        苏ICP备2025165232号-1
+      </a>
+    </footer>
+  </div>
+
+  <!-- ============ 城堡对话框 ============ -->
+  <div class="dialog-overlay" id="castleDialog" data-state="closed">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <div class="dialog-title">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #8b5cf6;">
+            <path d="M4 21V8l4-4 4 4 4-4 4 4v13" />
+            <path d="M4 12h16" />
+            <path d="M10 21v-6a2 2 0 0 1 4 0v6" />
+            <path d="M4 8V5l4-3 4 3 4-3 4 3v3" />
+          </svg>
+          获得稀有奖品
+        </div>
+        <div class="dialog-description" id="modalPrizeText">恭喜获得「梦幻城堡」</div>
+      </div>
+      <div class="dialog-body">
+        <div class="data-row">
+          <span class="data-label">累计抽奖次数</span>
+          <span class="data-value" id="modalDraws">0</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">累计支出</span>
+          <span class="data-value" id="modalExpense">0 元</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">累计收入</span>
+          <span class="data-value" id="modalIncome">0 元</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">净盈亏</span>
+          <span class="data-value" id="modalProfitLoss">0 元</span>
+        </div>
+        <div class="separator"></div>
+        <div class="text-xs font-medium text-muted mb-2">奖品明细</div>
+        <div id="modalPrizeDetails" style="max-height: 180px; overflow-y: auto;"></div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn btn-default w-full" onclick="closeModal()">继续抽奖</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 模拟结果对话框 ============ -->
+  <div class="dialog-overlay" id="simulationDialog" data-state="closed">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <div class="dialog-title">
+          <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18" />
+            <path d="M18 17V9" />
+            <path d="M13 17V5" />
+            <path d="M8 17v-3" />
+          </svg>
+          蒙特卡洛模拟报告
+        </div>
+        <div class="dialog-description">抽到「梦幻城堡」所需次数的统计结果</div>
+      </div>
+      <div class="dialog-body">
+        <div class="data-row">
+          <span class="data-label">迭代次数</span>
+          <span class="data-value" id="simRounds">0</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">样本均值</span>
+          <span class="data-value" id="simAverage" style="color: hsl(var(--primary));">0 次</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">最优样本（最小值）</span>
+          <span class="data-value" id="simMin">0 次</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">最差样本（最大值）</span>
+          <span class="data-value" id="simMax">0 次</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">样本中位数</span>
+          <span class="data-value" id="simMedian">0 次</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">理论期望值</span>
+          <span class="data-value text-muted" id="simTheory">625 次</span>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn btn-default w-full" onclick="closeSimulationModal()">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 进度覆盖层 ============ -->
+  <div class="dialog-overlay" id="progressOverlay" data-state="closed">
+    <div class="dialog-content" style="max-width: 22rem;">
+      <div class="dialog-header">
+        <div class="dialog-title">
+          <svg class="icon-lg animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+          正在执行模拟
+        </div>
+        <div class="dialog-description">正在生成随机样本并计算统计量</div>
+      </div>
+      <div class="dialog-body" style="padding-bottom: 1.5rem;">
+        <div class="progress mb-3">
+          <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
+        </div>
+        <div class="text-sm text-muted" style="text-align: center;" id="progressText">0%</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== 图标库（纯 SVG） ==========
+    const ICONS = {
+      castle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 21V8l4-4 4 4 4-4 4 4v13" />
+        <path d="M4 12h16" />
+        <path d="M10 21v-6a2 2 0 0 1 4 0v6" />
+        <path d="M4 8V5l4-3 4 3 4-3 4 3v3" />
+      </svg>`,
+      charm: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2c-1.5 3-4 4-4 7a4 4 0 0 0 8 0c0-3-2.5-4-4-7z" />
+        <path d="M12 9v3" />
+        <path d="M12 14a4 4 0 0 1 4 4c0 2-2 4-4 4s-4-2-4-4a4 4 0 0 1 4-4z" />
+      </svg>`,
+      diamond: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 3h12l4 6-10 12L2 9z" />
+        <path d="M2 9h20" />
+        <path d="M12 21L8 9l4-6 4 6-4 12z" />
+      </svg>`,
+      wand: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 4V2" />
+        <path d="M15 16v-2" />
+        <path d="M8 9h2" />
+        <path d="M20 9h2" />
+        <path d="M17.8 11.8L19 13" />
+        <path d="M15 9h0" />
+        <path d="M17.8 6.2L19 5" />
+        <path d="M3 21l9-9" />
+        <path d="M12.2 6.2L11 5" />
+      </svg>`,
+      doll: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="5" />
+        <path d="M9 7h.01" />
+        <path d="M15 7h.01" />
+        <path d="M10 10c.5.5 1 .5 1.5 0" />
+        <path d="M12.5 10c.5.5 1 .5 1.5 0" />
+        <path d="M8 13v4a4 4 0 0 0 8 0v-4" />
+      </svg>`,
+      candy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="6" />
+        <path d="M12 6c-2-2-4-2-6 0s-2 4 0 6" />
+        <path d="M12 18c2 2 4 2 6 0s2-4 0-6" />
+        <path d="M9 9l6 6" />
+        <path d="M15 9l-6 6" />
+      </svg>`,
+      ticket: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 9a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v1a2 2 0 0 0 0 4v1a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-1a2 2 0 0 0 0-4V9z" />
+        <path d="M13 5v2" />
+        <path d="M13 17v2" />
+        <path d="M13 11v2" />
+      </svg>`,
+
+      fortune_极吉: `<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width: 1.75rem; height: 1.75rem;">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="#f59e0b" fill-opacity="0.15" />
+      </svg>`,
+      fortune_大吉: `<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width: 1.75rem; height: 1.75rem;">
+        <circle cx="12" cy="12" r="10" fill="#ef4444" fill-opacity="0.1" />
+        <circle cx="12" cy="12" r="4" fill="#ef4444" fill-opacity="0.2" />
+        <path d="M12 2v4" />
+        <path d="M12 18v4" />
+        <path d="M2 12h4" />
+        <path d="M18 12h4" />
+      </svg>`,
+      fortune_中吉: `<svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width: 1.75rem; height: 1.75rem;">
+        <path d="M12 2C8 6 6 8 6 12a6 6 0 0 0 12 0c0-4-2-6-6-10z" fill="#10b981" fill-opacity="0.1" />
+        <path d="M12 2v20" />
+      </svg>`,
+      fortune_小吉: `<svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width: 1.75rem; height: 1.75rem;">
+        <path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#3b82f6" fill-opacity="0.1" />
+      </svg>`,
+      fortune_平: `<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width: 1.75rem; height: 1.75rem;">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="#8b5cf6" fill-opacity="0.1" />
+      </svg>`,
+      fortune_小凶: `<svg viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width: 1.75rem; height: 1.75rem;">
+        <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" fill="#6b7280" fill-opacity="0.08" />
+      </svg>`
+    };
+
+    // ========== 数据配置 ==========
+    const multiplierConfigs = {
+      1: [
+        { name: '梦幻城堡', icon: 'castle', probability: 0.0004, reward: 2233, color: 'prize-icon-castle' },
+        { name: '神秘护符', icon: 'charm', probability: 0.0008, reward: 200, color: 'prize-icon-charm' },
+        { name: '时空钻石', icon: 'diamond', probability: 0.0012, reward: 100, color: 'prize-icon-diamond' },
+        { name: '彩虹魔杖', icon: 'wand', probability: 0.037, reward: 40, color: 'prize-icon-wand' },
+        { name: '甜心玩偶', icon: 'doll', probability: 0.4556, reward: 16, color: 'prize-icon-doll' },
+        { name: '彩虹糖', icon: 'candy', probability: 0.445, reward: 9, color: 'prize-icon-candy' },
+        { name: '观影券', icon: 'ticket', probability: 0.06, reward: 2, color: 'prize-icon-ticket' }
+      ],
+      3: [
+        { name: '梦幻城堡', icon: 'castle', probability: 0.0012, reward: 2233, color: 'prize-icon-castle' },
+        { name: '神秘护符', icon: 'charm', probability: 0.0004, reward: 200, color: 'prize-icon-charm' },
+        { name: '时空钻石', icon: 'diamond', probability: 0.0006, reward: 100, color: 'prize-icon-diamond' },
+        { name: '彩虹魔杖', icon: 'wand', probability: 0.0146, reward: 40, color: 'prize-icon-wand' },
+        { name: '甜心玩偶', icon: 'doll', probability: 0.4887, reward: 16, color: 'prize-icon-doll' },
+        { name: '彩虹糖', icon: 'candy', probability: 0.437, reward: 9, color: 'prize-icon-candy' },
+        { name: '观影券', icon: 'ticket', probability: 0.0575, reward: 2, color: 'prize-icon-ticket' }
+      ],
+      4: [
+        { name: '梦幻城堡', icon: 'castle', probability: 0.0016, reward: 2233, color: 'prize-icon-castle' },
+        { name: '神秘护符', icon: 'charm', probability: 0.0001, reward: 200, color: 'prize-icon-charm' },
+        { name: '时空钻石', icon: 'diamond', probability: 0.0002, reward: 100, color: 'prize-icon-diamond' },
+        { name: '彩虹魔杖', icon: 'wand', probability: 0.0003, reward: 40, color: 'prize-icon-wand' },
+        { name: '甜心玩偶', icon: 'doll', probability: 0.4803, reward: 16, color: 'prize-icon-doll' },
+        { name: '彩虹糖', icon: 'candy', probability: 0.4536, reward: 9, color: 'prize-icon-candy' },
+        { name: '观影券', icon: 'ticket', probability: 0.0639, reward: 2, color: 'prize-icon-ticket' }
+      ],
+      5: [
+        { name: '梦幻城堡', icon: 'castle', probability: 0.002, reward: 2233, color: 'prize-icon-castle' },
+        { name: '神秘护符', icon: 'charm', probability: 0.00001, reward: 200, color: 'prize-icon-charm' },
+        { name: '时空钻石', icon: 'diamond', probability: 0.00001, reward: 100, color: 'prize-icon-diamond' },
+        { name: '彩虹魔杖', icon: 'wand', probability: 0.00001, reward: 40, color: 'prize-icon-wand' },
+        { name: '甜心玩偶', icon: 'doll', probability: 0.4565, reward: 16, color: 'prize-icon-doll' },
+        { name: '彩虹糖', icon: 'candy', probability: 0.4396, reward: 9, color: 'prize-icon-candy' },
+        { name: '观影券', icon: 'ticket', probability: 0.10187, reward: 2, color: 'prize-icon-ticket' }
+      ]
+    };
+
+    let currentMultiplier = 1;
+    let prizes = [...multiplierConfigs[1]];
+
+    let gameState = {
+      totalDraws: 0,
+      totalExpense: 0,
+      totalIncome: 0,
+      prizeCounts: {}
+    };
+
+    // ========== 运势系统 ==========
+    const fortuneTypes = [
+      { key: '极吉', minScore: 80, color: '#f59e0b' },
+      { key: '大吉', minScore: 60, color: '#ef4444' },
+      { key: '中吉', minScore: 40, color: '#10b981' },
+      { key: '小吉', minScore: 20, color: '#3b82f6' },
+      { key: '平', minScore: 10, color: '#8b5cf6' },
+      { key: '小凶', minScore: 0, color: '#6b7280' }
+    ];
+
+    const fortuneMessages = {
+      极吉: ['今日运势极佳，适宜大量抽奖', '财气旺盛，建议进行连抽操作', '幸运值达到峰值，可尝试高倍率方案'],
+      大吉: ['运势强劲，适合连续抽奖', '今日出手预期收益良好', '财运亨通，可适当加大投入'],
+      中吉: ['运势平稳，适合试探性抽奖', '小规模尝试预期有所收获', '运势尚可，建议量力而行'],
+      小吉: ['运势一般，建议控制抽奖次数', '今日宜以单次抽奖为主', '保持理性，谨慎决策'],
+      平: ['运势平平，建议观望', '今日宜保存资金实力', '顺其自然，不宜强求'],
+      小凶: ['运势不佳，建议暂缓抽奖', '今日宜休息调整', '资金安全优先，建议明日再试']
+    };
+
+    function getSeededRandom() {
+      const now = new Date();
+      const dateSeed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+      const random = Math.sin(dateSeed) * 10000;
+      return random - Math.floor(random);
+    }
+
+    function calculateDailyFortune() {
+      const now = new Date();
+      let score = 0;
+      const factors = [];
+
+      const dayOfMonth = now.getDate();
+      if ([8, 18, 28].includes(dayOfMonth)) { score += 20; factors.push('吉日'); }
+      else if ([6, 16, 26].includes(dayOfMonth)) { score += 15; factors.push('次吉日'); }
+      else if ([4, 14, 24].includes(dayOfMonth)) { score -= 5; factors.push('凶日'); }
+
+      const dayOfWeek = now.getDay();
+      if (dayOfWeek === 5) { score += 20; factors.push('周五加成'); }
+      else if (dayOfWeek === 6) { score += 15; factors.push('周六加成'); }
+      else if (dayOfWeek === 0) { score += 10; factors.push('周日加成'); }
+      else if (dayOfWeek === 1 || dayOfWeek === 2) { score -= 5; factors.push('工作日'); }
+
+      const hour = now.getHours();
+      if (hour >= 20 || hour <= 6) { score += 10; factors.push('深夜时段'); }
+      else if (hour >= 12 && hour <= 14) { score += 5; factors.push('午间时段'); }
+
+      const lunarDay = (dayOfMonth - 1) % 30;
+      if (lunarDay >= 10 && lunarDay <= 15) { score += 10; factors.push('上弦月'); }
+      else if (lunarDay >= 25 || lunarDay <= 5) { score += 5; factors.push('月相周期'); }
+
+      const seeded = getSeededRandom();
+      const randomScore = Math.floor(seeded * 31);
+      score += randomScore;
+
+      let fortuneType = fortuneTypes[fortuneTypes.length - 1];
+      for (let type of fortuneTypes) {
+        if (score >= type.minScore) { fortuneType = type; break; }
+      }
+
+      const messages = fortuneMessages[fortuneType.key] || ['运势平稳'];
+      const message = messages[Math.floor(Math.random() * messages.length)];
+
+      let suggestion = '';
+      if (score >= 60) suggestion = '建议今日进行抽奖，连抽效果更佳';
+      else if (score >= 40) suggestion = '适合抽奖，建议控制连抽规模';
+      else if (score >= 20) suggestion = '可少量尝试，建议以单次抽奖为主';
+      else if (score >= 10) suggestion = '建议观望，如需抽奖请控制规模';
+      else suggestion = '运势不佳，建议择日再试';
+
+      return { type: fortuneType, message, factors, suggestion, score };
+    }
+
+    function updateFortuneDisplay() {
+      const f = calculateDailyFortune();
+      const iconKey = 'fortune_' + f.type.key;
+      const iconContainer = document.getElementById('fortuneIcon');
+      if (ICONS[iconKey]) {
+        iconContainer.innerHTML = ICONS[iconKey];
+      }
+      document.getElementById('fortuneText').textContent = `${f.type.key} · ${f.message}`;
+      document.getElementById('fortuneDetail').textContent = `${f.factors.join(' · ')} | ${f.suggestion}`;
+      document.getElementById('fortuneText').style.color = f.type.color;
+    }
+
+    // ========== 核心逻辑 ==========
+    function initPrizeCounts() {
+      prizes.forEach(p => { gameState.prizeCounts[p.name] = 0; });
+    }
+
+    function drawPrize() {
+      const random = Math.random();
+      let cum = 0;
+      for (let p of prizes) {
+        cum += p.probability;
+        if (random <= cum) return p;
+      }
+      return prizes[prizes.length - 1];
+    }
+
+    function draw(count) {
+      let castleCount = 0;
+      for (let i = 0; i < count; i++) {
+        const prize = drawPrize();
+        gameState.prizeCounts[prize.name] = (gameState.prizeCounts[prize.name] || 0) + 1;
+        gameState.totalDraws++;
+        gameState.totalIncome += prize.reward;
+        if (prize.name === '梦幻城堡') castleCount++;
+      }
+      gameState.totalExpense += count * 15;
+      updateDisplay();
+
+      if (castleCount > 0) {
+        setTimeout(() => showCastleDialog(), 100);
+      }
+    }
+
+    function updateDisplay() {
+      const profit = gameState.totalIncome - gameState.totalExpense;
+
+      document.getElementById('totalDraws').textContent = gameState.totalDraws;
+      document.getElementById('totalExpense').textContent = gameState.totalExpense;
+      document.getElementById('totalIncome').textContent = gameState.totalIncome;
+
+      const plEl = document.getElementById('profitLoss');
+      plEl.textContent = (profit >= 0 ? '+' : '') + profit;
+      plEl.className = 'metric-value ' + (profit > 0 ? 'text-success' : profit < 0 ? 'text-destructive' : 'text-warning');
+
+      const grid = document.getElementById('prizesGrid');
+      grid.innerHTML = '';
+      let hasPrize = false;
+      prizes.forEach(p => {
+        const cnt = gameState.prizeCounts[p.name] || 0;
+        if (cnt > 0) {
+          hasPrize = true;
+          const chip = document.createElement('div');
+          chip.className = 'prize-chip';
+          const iconSvg = ICONS[p.icon] || '';
+          chip.innerHTML = `
+            <div class="prize-chip-name ${p.color}">
+              <span style="width: 0.875rem; height: 0.875rem; display: inline-flex;">${iconSvg}</span>
+              <span>${p.name}</span>
+            </div>
+            <div class="prize-chip-count">${cnt}</div>
+          `;
+          grid.appendChild(chip);
+        }
+      });
+      if (!hasPrize) {
+        grid.innerHTML = '<div class="text-muted text-sm" style="grid-column: 1 / -1; text-align: center; padding: 1.5rem;">暂无奖品数据</div>';
+      }
+
+      updateFortuneDisplay();
+    }
+
+    // ========== 对话框 ==========
+    function showCastleDialog() {
+      const profit = gameState.totalIncome - gameState.totalExpense;
+      const castleCnt = gameState.prizeCounts['梦幻城堡'] || 0;
+
+      document.getElementById('modalDraws').textContent = gameState.totalDraws;
+      document.getElementById('modalExpense').textContent = gameState.totalExpense + ' 元';
+      document.getElementById('modalIncome').textContent = gameState.totalIncome + ' 元';
+
+      const prizeText = document.getElementById('modalPrizeText');
+      prizeText.textContent = castleCnt === 1 ? '恭喜获得「梦幻城堡」' : `恭喜获得 ${castleCnt} 个「梦幻城堡」`;
+
+      const plEl = document.getElementById('modalProfitLoss');
+      plEl.textContent = (profit >= 0 ? '+' : '') + profit + ' 元';
+      plEl.className = 'data-value ' + (profit > 0 ? 'text-success' : profit < 0 ? 'text-destructive' : 'text-warning');
+
+      const details = document.getElementById('modalPrizeDetails');
+      details.innerHTML = '';
+      prizes.forEach(p => {
+        const c = gameState.prizeCounts[p.name] || 0;
+        if (c > 0) {
+          const row = document.createElement('div');
+          row.className = 'data-row';
+          const iconSvg = ICONS[p.icon] || '';
+          row.innerHTML = `
+            <span class="data-label flex items-center gap-1 ${p.color}" style="width: 1rem; height: 1rem; display: inline-flex;">${iconSvg}<span style="color: hsl(var(--foreground)); margin-left: 0.375rem;">${p.name}</span></span>
+            <span class="data-value">${c} × ${p.reward} 元</span>
+          `;
+          details.appendChild(row);
+        }
+      });
+
+      document.getElementById('castleDialog').setAttribute('data-state', 'open');
+    }
+
+    function closeModal() {
+      document.getElementById('castleDialog').setAttribute('data-state', 'closed');
+      reset();
+    }
+
+    function closeSimulationModal() {
+      document.getElementById('simulationDialog').setAttribute('data-state', 'closed');
+    }
+
+    // ========== 重置 ==========
+    function reset() {
+      gameState = {
+        totalDraws: 0,
+        totalExpense: 0,
+        totalIncome: 0,
+        prizeCounts: {}
+      };
+      initPrizeCounts();
+      updateDisplay();
+      document.getElementById('simulationResults').innerHTML = '';
+    }
+
+    // ========== 蒙特卡洛模拟 ==========
+    async function runSimulation() {
+      const roundsInput = document.getElementById('simulationRounds');
+      const rounds = parseInt(roundsInput.value);
+      if (isNaN(rounds) || rounds < 1 || rounds > 100000) {
+        alert('请输入 1 - 100000 之间的整数');
+        return;
+      }
+
+      document.getElementById('progressOverlay').setAttribute('data-state', 'open');
+      document.getElementById('progressBar').style.width = '0%';
+      document.getElementById('progressText').textContent = '0%';
+
+      const results = [];
+      let totalCastleDraws = 0;
+
+      for (let i = 0; i < rounds; i++) {
+        let draws = 0;
+        let found = false;
+        while (!found) {
+          const p = drawPrize();
+          draws++;
+          if (p.name === '梦幻城堡') {
+            found = true;
+            totalCastleDraws += draws;
+            results.push(draws);
+          }
+        }
+
+        const percent = Math.round(((i + 1) / rounds) * 100);
+        document.getElementById('progressBar').style.width = percent + '%';
+        document.getElementById('progressText').textContent = percent + '%';
+
+        if ((i + 1) % 100 === 0) {
+          await new Promise(r => setTimeout(r, 8));
+        }
+      }
+
+      document.getElementById('progressOverlay').setAttribute('data-state', 'closed');
+
+      const avg = (totalCastleDraws / rounds).toFixed(2);
+      const sorted = [...results].sort((a, b) => a - b);
+      const min = sorted[0];
+      const max = sorted[sorted.length - 1];
+      const median = sorted[Math.floor(sorted.length / 2)];
+      const theory = Math.round(1 / prizes.find(p => p.name === '梦幻城堡').probability);
+
+      document.getElementById('simulationResults').innerHTML = `
+        <div class="sim-stats">
+          <div class="sim-stat-item">
+            <div class="sim-stat-label">样本均值</div>
+            <div class="sim-stat-value" style="color: hsl(var(--primary));">${avg}</div>
+          </div>
+          <div class="sim-stat-item">
+            <div class="sim-stat-label">最优样本</div>
+            <div class="sim-stat-value">${min}</div>
+          </div>
+          <div class="sim-stat-item">
+            <div class="sim-stat-label">最差样本</div>
+            <div class="sim-stat-value">${max}</div>
+          </div>
+          <div class="sim-stat-item">
+            <div class="sim-stat-label">样本中位数</div>
+            <div class="sim-stat-value">${median}</div>
+          </div>
+        </div>
+        <div class="text-xs text-muted mt-3" style="text-align: center;">
+          基于 ${rounds} 次迭代 · 理论期望 ${theory} 次 · 均值误差 ${((avg - theory) / theory * 100).toFixed(1)}%
+        </div>
+      `;
+
+      document.getElementById('simRounds').textContent = rounds;
+      document.getElementById('simAverage').textContent = avg + ' 次';
+      document.getElementById('simMin').textContent = min + ' 次';
+      document.getElementById('simMax').textContent = max + ' 次';
+      document.getElementById('simMedian').textContent = median + ' 次';
+      document.getElementById('simTheory').textContent = theory + ' 次';
+      document.getElementById('simulationDialog').setAttribute('data-state', 'open');
+
+      reset();
+    }
+
+    // ========== 倍率 ==========
+    function changeMultiplier(mult, event) {
+      currentMultiplier = mult;
+      prizes = [...multiplierConfigs[mult]];
+
+      document.querySelectorAll('.toggle-group-item').forEach(btn => {
+        btn.setAttribute('data-active', 'false');
+      });
+      if (event && event.target) {
+        event.target.setAttribute('data-active', 'true');
+      }
+
+      const titleMap = { 1: '盲盒模拟器', 3: '盲盒模拟器 · 3倍', 4: '盲盒模拟器 · 4倍', 5: '盲盒模拟器 · 5倍' };
+      document.getElementById('mainTitle').textContent = titleMap[mult];
+      document.getElementById('multiplierBadge').textContent = mult === 1 ? '基础倍率' : mult + ' 倍倍率';
+
+      updatePrizeTable();
+      reset();
+    }
+
+    function updatePrizeTable() {
+      const tbody = document.getElementById('prizeTableBody');
+      tbody.innerHTML = '';
+      prizes.forEach(p => {
+        const row = document.createElement('tr');
+        const prob = (p.probability * 100).toFixed(3).replace(/\.?0+$/, '');
+        const iconSvg = ICONS[p.icon] || '';
+        row.innerHTML = `
+          <td>
+            <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
+              <span class="${p.color}" style="width: 1rem; height: 1rem; display: inline-flex;">${iconSvg}</span>
+              <span>${p.name}</span>
+            </span>
+          </td>
+          <td class="text-right text-muted">${prob}%</td>
+          <td class="text-right font-medium">${p.reward} 元</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // ========== 初始化 ==========
+    window.onload = function () {
+      initPrizeCounts();
+      updateDisplay();
+      updatePrizeTable();
+      updateFortuneDisplay();
+      document.querySelector('.toggle-group-item[data-mult="1"]').setAttribute('data-active', 'true');
+    };
+  </script>
+</body>
+</html>
