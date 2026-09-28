@@ -1,70 +1,124 @@
+<div align="center">
 
+# 🎁 Xindong · Blind Box Simulator
 
-# 心跳 (Xindong)
+**English** | [简体中文](README.zh-CN.md)
 
-一个精美的网页版模拟抽卡与收益分析工具，帮助您追踪抽卡记录、分析收益情况并进行模拟抽卡。
+A single-file, dependency-free web app for blind-box draw simulation, probability
+analysis and Monte Carlo estimation — open `index.html` and start pulling.
 
-## ✨ 功能特性
+[![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)](https://developer.mozilla.org/docs/Web/HTML)
+[![CSS3](https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white)](https://developer.mozilla.org/docs/Web/CSS)
+[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/docs/Web/JavaScript)
+[![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](.)
+[![Single File](https://img.shields.io/badge/build-none-blueviolet)](.)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-### 📊 数据统计面板
-- **总抽卡次数** - 记录累计抽取次数
-- **总消费** - 统计所有抽卡消耗的货币
-- **总收入** - 统计抽卡获得的总收益
-- **盈亏分析** - 实时计算收益与消费的差额
+[![GitHub stars](https://img.shields.io/github/stars/jiejiebiezheyang/xindong?style=flat&logo=github)](https://github.com/jiejiebiezheyang/xindong/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/jiejiebiezheyang/xindong?style=flat&logo=github)](https://github.com/jiejiebiezheyang/xindong/network/members)
+[![Last Commit](https://img.shields.io/github/last-commit/jiejiebiezheyang/xindong)](https://github.com/jiejiebiezheyang/xindong/commits/main)
+[![Repo Size](https://img.shields.io/github/repo-size/jiejiebiezheyang/xindong)](https://github.com/jiejiebiezheyang/xindong)
 
-### 🎰 抽卡系统
-- **概率保底机制** - 完善的保底系统设计
-- **倍率选择** - 支持多种抽卡倍率配置
-- **奖池展示** - 清晰的奖池物品展示
-
-### 🎮 模拟功能
-- **模拟抽卡** - 无需消耗资源的模拟抽卡体验
-- **结果分析** - 详细的模拟结果数据分析
-- **进度追踪** - 模拟过程进度可视化
-
-### 🎨 界面设计
-- **响应式布局** - 适配各种屏幕尺寸
-- **暗色主题** - 护眼的深色界面
-- **流畅动画** - 舒适的交互反馈
-
-## 🚀 快速开始
-
-直接用浏览器打开 `index.html` 文件即可使用。
-
-## 📦 项目结构
-
-```
-xindong/
-├── index.html      # 主页面文件
-└── favicon.svg     # 网站图标
-```
-
-## 🎯 使用指南
-
-1. **查看数据** - 顶部面板显示核心统计指标
-2. **配置抽卡** - 侧边栏可调整倍率设置
-3. **开始抽卡** - 主面板进行抽卡操作
-4. **查看奖池** - 底部展示可获取的奖励
-5. **模拟模式** - 无消耗体验抽卡乐趣
-
-## 📝 技术栈
-
-- 原生 HTML5/CSS3/JavaScript
-- 无需后端依赖
-- 浏览器直接运行
-
-## 🤝 贡献指南
-
-欢迎提交 Issue 和 Pull Request 来帮助改进项目。
-
-## 📄 许可证
-
-本项目遵循开源协议。
-
-## 📧 联系方式
-
-如有问题或建议，请通过 Gitee 联系我们。
+</div>
 
 ---
 
-*Happy Drawing! 🎉*
+## ✨ Features
+
+### 📊 Stats Dashboard
+
+- **Total Draws** — cumulative number of pulls
+- **Total Spent** — currency consumed by every draw
+- **Total Income** — total rewards earned from pulls
+- **Net Profit / Loss** — income minus spending, updated in real time
+
+### 🎰 Draw System
+
+- **Multiple Schemes** — basic, 3×, 4× and 5× probability distributions
+- **Clear Odds Table** — each prize's probability and reward value at a glance
+- **Draw Buttons** — single draw, 10-pull and 50-pull (15 units per draw)
+
+### 🔮 Daily Fortune
+
+- A deterministic daily "luck" score derived from the date and time
+- Shows the fortune level, contributing factors and a playful suggestion
+- _For entertainment only — please pull responsibly._
+
+### 🎮 Monte Carlo Simulation
+
+- Estimates how many draws are needed to obtain the rare **Fantasy Castle**
+- Reports sample mean, best / worst case, median and theoretical expectation
+- Live progress bar while the simulation runs
+
+### 🎨 Interface
+
+- Clean [shadcn/ui](https://ui.shadcn.com/)-inspired design tokens
+- Responsive layout that adapts from mobile to desktop
+- Smooth animations for comfortable interaction
+
+## 🚀 Quick Start
+
+No build step, no install. Just open the file in your browser:
+
+```bash
+git clone https://github.com/jiejiebiezheyang/xindong.git
+cd xindong
+# Open index.html in your browser
+```
+
+> Tip: you can also serve it locally with any static server, e.g. `npx serve .`.
+
+## 🎯 Usage
+
+1. **Pick a scheme** — choose the 1× / 3× / 4× / 5× probability plan from the sidebar.
+2. **Check the odds** — review each prize's probability and reward in the distribution table.
+3. **Draw** — use single / 10-pull / 50-pull; every draw costs 15 units.
+4. **Watch your balance** — the top metrics track draws, spending, income and net profit.
+5. **Run a simulation** — estimate the expected draws for the Fantasy Castle via Monte Carlo.
+6. **Reset** — clear the current session's data at any time.
+
+## � Probability Model
+
+Each scheme defines a distribution over seven prizes. The basic (1×) scheme:
+
+| Prize                 | Probability | Reward |
+| :-------------------- | ----------: | -----: |
+| 🏰 Fantasy Castle     |       0.04% |   2233 |
+| 🔮 Mystic Charm       |       0.08% |    200 |
+| 💎 Time-Space Diamond |       0.12% |    100 |
+| 🪄 Rainbow Wand       |        3.7% |     40 |
+| � Sweetheart Doll     |      45.56% |     16 |
+| 🍬 Rainbow Candy      |       44.5% |      9 |
+| 🎟️ Movie Ticket       |          6% |      2 |
+
+At the basic rate, the theoretical expectation for the Fantasy Castle is
+`1 / 0.0004 = 2500` draws.
+
+## 📦 Project Structure
+
+```text
+xindong/
+├── index.html      # Single-page app (HTML + CSS + JS)
+├── favicon.svg     # Site icon
+├── LICENSE         # MIT License
+├── README.md       # Documentation (English)
+└── README.zh-CN.md # Documentation (简体中文)
+```
+
+## �️ Tech Stack
+
+- Native **HTML5 / CSS3 / JavaScript** — no framework, no bundler
+- **No backend** and **no runtime dependencies**
+- Runs entirely in the browser with all state kept in memory
+
+## 📄 License
+
+Released under the [MIT License](LICENSE) © 2026 jiejiebiezheyang.
+
+---
+
+<div align="center">
+
+_Happy pulling! 🎉_
+
+</div>
